@@ -14,6 +14,11 @@ import static com.seeburger.bytebuffer.ByteBufferUtil.debugRead;
 @Slf4j
 public class Server {
     public static void main(String[] args) throws IOException {
+        blocking();
+//        selector();
+    }
+
+    private static void selector() throws IOException {
         // 创建 selector，管理多个channel
         Selector selector = Selector.open();
         ServerSocketChannel ssc = ServerSocketChannel.open();
@@ -57,7 +62,7 @@ public class Server {
         // 连接集合
         ArrayList<SocketChannel> channels = new ArrayList<>();
         while (true) {
-            // accept建立与客户端连接，SocketChannel用来与客户端之间通信
+            // accept建立与客户端连接，SocketChannel用来与客户端之间通信（读写操作）
             log.debug("connecting...");
             SocketChannel sc = ssc.accept(); // 阻塞方法，线程停止运行
             log.debug("connected... {} ", sc);
@@ -65,7 +70,7 @@ public class Server {
             for (SocketChannel channel : channels) {
                 // 接收客户端发送的数据
                 log.debug("before read... {} ", channel);
-                channel.read(buffer);
+                channel.read(buffer); // 阻塞方法，线程停止运行
                 buffer.flip();
                 debugRead(buffer);
                 buffer.clear();
