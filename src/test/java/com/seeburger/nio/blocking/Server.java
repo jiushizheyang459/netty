@@ -8,14 +8,16 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import static com.seeburger.bytebuffer.ByteBufferUtil.debugRead;
 
 @Slf4j
 public class Server {
     public static void main(String[] args) throws IOException {
-        blocking();
-//        selector();
+//        unblocking();
+//        blocking();
+        selector();
     }
 
     private static void selector() throws IOException {
@@ -26,6 +28,7 @@ public class Server {
 
         // 建立 selector 和 channel 的联系（注册）
         // SelectionKey 就是将来事件发生后，通过他可以知道事件和哪个channel的事件
+        // ops意思为这个key不关注任何事件，初始化
         SelectionKey sscKey = ssc.register(selector, 0, null);
         // 指明这个 key 只关注accept事件
         sscKey.interestOps(SelectionKey.OP_ACCEPT);
@@ -33,7 +36,7 @@ public class Server {
 
         ssc.bind(new InetSocketAddress(8080));
         while (true) {
-            // 调用 selector 的 select 方法，没有事件发生，线程阻塞，有事件，线程才会恢复运行
+            // 调用 selector 的 select 方法，没有事件发生，线程阻塞，有事件，线程才会恢复运行，相当于开关
             selector.select();
 
             // 处理事件，selectedKeys 内部包含了所有发生的事件
@@ -60,7 +63,7 @@ public class Server {
         ssc.bind(new InetSocketAddress(8080));
 
         // 连接集合
-        ArrayList<SocketChannel> channels = new ArrayList<>();
+        List<SocketChannel> channels = new ArrayList<>();
         while (true) {
             // accept建立与客户端连接，SocketChannel用来与客户端之间通信（读写操作）
             log.debug("connecting...");
@@ -86,17 +89,16 @@ public class Server {
         ByteBuffer buffer = ByteBuffer.allocate(16);
         // 创建服务器
         ServerSocketChannel ssc = ServerSocketChannel.open();
-        ssc.configureBlocking(false); // 非阻塞模式，线程还会继续运行
+        ssc.configureBlocking(false); // 非阻塞模式
 
         // 绑定监听端口
         ssc.bind(new InetSocketAddress(8080));
 
         // 连接集合
-        ArrayList<SocketChannel> channels = new ArrayList<>();
+        List<SocketChannel> channels = new ArrayList<>();
         while (true) {
             // accept建立与客户端连接，SocketChannel用来与客户端之间通信
-//            log.debug("connecting...");
-            SocketChannel sc = ssc.accept(); // 阻塞方法，线程停止运行
+            SocketChannel sc = ssc.accept(); // 非阻塞模式，线程还会继续运行，但sc返回值为null
             if (sc != null) {
                 log.debug("connected... {} ", sc);
                 sc.configureBlocking(false); // 将SocketChannel设为非阻塞模式
@@ -104,7 +106,6 @@ public class Server {
             }
             for (SocketChannel channel : channels) {
                 // 接收客户端发送的数据
-//                log.debug("before read... {} ", channel);
                 int read = channel.read(buffer);// 非阻塞方法，线程仍然运行，如果没有读到数据，read 返回 0
                 if (read > 0) {
                     buffer.flip();
