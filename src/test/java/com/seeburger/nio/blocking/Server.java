@@ -50,6 +50,8 @@ public class Server {
             Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
             while (iter.hasNext()) {
                 SelectionKey key = iter.next();
+                //处理key的时候，要从 selectedKeys 集合中删除，否则下次处理就会有问题
+                iter.remove();
                 log.debug("key: {}", key);
                 // 区分事件类型
                 if (key.isAcceptable()) {
@@ -62,9 +64,13 @@ public class Server {
                 } else if (key.isReadable()) {
                     SocketChannel channel = (SocketChannel) key.channel();
                     ByteBuffer buffer = ByteBuffer.allocate(16);
-                    channel.read(buffer);
-                    buffer.flip();
-                    debugRead(buffer);
+                    int read = channel.read(buffer);
+                    if (read < 0) {
+                        key.cancel(); // 客户端断开了，需要将key取消
+                    } else {
+                        buffer.flip();
+                        debugRead(buffer);
+                    }
                 }
             }
         }
