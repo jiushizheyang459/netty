@@ -1,0 +1,29 @@
+Boss线程 (main, "boss")                      Worker线程 ("worker-0")
+──────────────────────────                   ──────────────────────────
+worker.register(sc) {
+    if (!start) {
+        thread = new Thread(this, name);  ──────────────┐
+        thread.start();   ───────────────┐              │
+    }                                    │              │
+                                         │    (JVM启动新线程)
+                                         │              │
+                                         │   run() {    │
+                                         │     while(true) {
+                                         │       selector.select(); // 阻塞 (selector还没初始化)
+                                         │       Runnable task = queue.poll();
+                                         │       if(task != null) task.run();
+                                         │     }
+                                         │   }
+                                         │              │
+    selector = Selector.open();  ◀───────┘              │
+    start = true;                                       │
+    queue.add(() -> sc.register(selector, OP_READ));    │
+    selector.wakeup();   ───────────────────────────────┘  // 唤醒worker
+}                                                       │
+                                                        │
+                                                        │  select() 被唤醒
+                                                        │  task = queue.poll(); // 取到任务
+                                                        │  task.run(); // 执行sc.register(...)
+                                                        │
+                                                        ▼
+                                              通道成功注册到worker的selector
