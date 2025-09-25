@@ -1,4 +1,4 @@
-package com.seeburger.nio.blocking;
+package com.seeburger.nio.write;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
