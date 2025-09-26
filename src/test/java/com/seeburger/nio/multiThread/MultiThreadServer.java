@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.seeburger.bytebuffer.ByteBufferUtil.debugAll;
 
@@ -22,8 +23,13 @@ public class MultiThreadServer {
         bossKey.interestOps(SelectionKey.OP_ACCEPT);
         ssc.bind(new InetSocketAddress(8080));
 
+        Worker[] workers = new Worker[Runtime.getRuntime().availableProcessors()];
+        for (int i = 0; i < workers.length; i++) {
+            workers[i] = new Worker("worker-" + i);
+        }
+        AtomicInteger index = new AtomicInteger();
         // 创建固定数量的worker 并初始化
-        Worker worker = new Worker("worker-0");
+//        Worker worker = new Worker("worker-0");
 
         while (true) {
             boss.select();
@@ -37,7 +43,9 @@ public class MultiThreadServer {
                     log.debug("connected...{}", sc.getRemoteAddress());
                     // 关联selector
                     log.debug("before register...{}", sc.getRemoteAddress());
-                    worker.register(sc); // boss线程调用 初始化 selector，启动worker-0
+//                    worker.register(sc);
+                    // round robin 轮询
+                    workers[index.getAndIncrement() % workers.length].register(sc); // boss线程调用 初始化 selector，启动worker-0
                     log.debug("after register...{}", sc.getRemoteAddress());
 
                 }
@@ -59,9 +67,9 @@ public class MultiThreadServer {
         // 初始化线程和selector
         public void register(SocketChannel sc) throws IOException {
             if (!start) {
+                selector = Selector.open();
                 thread = new Thread(this, name);
                 thread.start();
-                selector = Selector.open();
                 start = true;
             }
             // 向队列添加了任务，但任务没有立马执行 boss
