@@ -1,4 +1,4 @@
-package com.seeburger.netty;
+package com.seeburger.netty.preview;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
